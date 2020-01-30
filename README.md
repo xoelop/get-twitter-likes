@@ -37,9 +37,13 @@ I saved the fav tweets to a spreadsheet on Google Sheets. It's updated every 6h 
 Just go to https://sheets.new to create a new Google spreadsheet. Then click on `File > Import > Upload` and select the CSV you've just created
 
 ## Saving new likes in Google Sheets with Integromat
+
+Integromat is a no-code automation tool that lets you connect hundreds of apps without coding. It's like Zapier on steroids.
+
+If you don't have an Integromat account, create a new one [here](https://www.integromat.com/?pc=xoelipedes). Note - it's an affiliate link, but Integromat has a great free tier that should be enough for this. And if you sign up for the paid account, it'd cost you the same :)
+
 I've created an Integromat scenario that every 6h looks for the tweets I've liked and saves it to the same spreadsheet I've created before. 
 
-Create a new scenario and import `twitter_likes_google_sheets_integromat.json`
+You can copy it just creating an empty scenario and importing `twitter_likes_google_sheets_integromat.json`. You'd have to connect your Twitter and Google accounts to Integromat then to make it work.
 
-If you don't have an Integromat account, create a new one [here](https://www.integromat.com/?pc=xoelipedes). Note - it's an affiliate link, Integromat has a great free tier that should be enough for this. And if you'd sign up for the paid account, it'd cost you the same :)
 
