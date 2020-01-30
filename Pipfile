@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pylint = "*"
+
+[packages]
+jupyter = "*"
+python-dotenv = "*"
+tweepy = "*"
+pandas = "==0.24.2"
+autopep8 = "*"
+pytest = "*"
+tqdm = "*"
+
+[requires]
+python_version = "3.6"

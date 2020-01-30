@@ -1,0 +1,4 @@
+.env
+.vscode/
+.ipynb_checkpoints
+.pytest_cache
