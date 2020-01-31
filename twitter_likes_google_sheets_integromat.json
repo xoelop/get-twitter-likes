@@ -6,11 +6,11 @@
             "module": "twitter:watchLikes",
             "version": 5,
             "parameters": {
-                "__IMTCONN__": 668739,
-                "select": "screenName",
-                "include_entities": true,
                 "limit": 100,
-                "screen_name": "xoelipedes"
+                "select": "screenName",
+                "__IMTCONN__": 668739,
+                "screen_name": "xoelipedes",
+                "include_entities": true
             },
             "mapper": {},
             "metadata": {
@@ -19,11 +19,11 @@
                     "y": -1
                 },
                 "restore": {
-                    "__IMTCONN__": {
-                        "label": "@xoelipedes xoel V1 (Xoel)"
-                    },
                     "select": {
                         "label": "By Screen Name"
+                    },
+                    "__IMTCONN__": {
+                        "label": "@xoelipedes xoel V1 (Xoel)"
                     }
                 },
                 "parameters": [
@@ -74,14 +74,6 @@
                 "__IMTCONN__": 668739
             },
             "mapper": {
-                "url": "/1.1/statuses/show.json",
-                "method": "GET",
-                "headers": [
-                    {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                    }
-                ],
                 "qs": [
                     {
                         "key": "trim_user",
@@ -99,6 +91,14 @@
                         "key": "id",
                         "value": "{{19.id_str}}"
                     }
+                ],
+                "url": "/1.1/statuses/show.json",
+                "method": "GET",
+                "headers": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
                 ]
             },
             "metadata": {
@@ -108,8 +108,14 @@
                     "name": "Get tweet full version"
                 },
                 "restore": {
-                    "__IMTCONN__": {
-                        "label": "@xoelipedes xoel V1 (Xoel)"
+                    "qs": {
+                        "mode": "chose",
+                        "items": [
+                            "undefined",
+                            "undefined",
+                            "undefined",
+                            "undefined"
+                        ]
                     },
                     "method": {
                         "mode": "chose",
@@ -121,14 +127,8 @@
                             "undefined"
                         ]
                     },
-                    "qs": {
-                        "mode": "chose",
-                        "items": [
-                            "undefined",
-                            "undefined",
-                            "undefined",
-                            "undefined"
-                        ]
+                    "__IMTCONN__": {
+                        "label": "@xoelipedes xoel V1 (Xoel)"
                     }
                 },
                 "parameters": [
@@ -222,7 +222,7 @@
                     "1": "= HYPERLINK(\"https://twitter.com/{{21.body.user.screen_name}}/status/{{21.body.id_str}}\")",
                     "2": "=IMAGE(\"{{replace(21.body.user.profile_image_url_https; \"normal.jpg\"; \"200x200.jpg\")}}\",1)",
                     "3": "= HYPERLINK(\"https://twitter.com/{{21.body.user.screen_name}}\", \"@{{21.body.user.screen_name}}\")",
-                    "4": "{{21.body.full_text}}",
+                    "4": " {{21.body.full_text}}",
                     "5": "=IMAGE(\"{{get(21.body.entities; \"media.1.media_url_https\")}}\", 1)",
                     "6": "{{21.body.user.name}}",
                     "7": "{{21.body.user.location}}",
@@ -232,7 +232,7 @@
                     "11": "{{21.body.retweet_count}}",
                     "12": "{{21.body.user.followers_count}}",
                     "13": "=IMAGE(\"{{replace(21.body.quoted_status.user.profile_image_url_https; \"normal.jpg\"; \"200x200.jpg\")}}\",1)",
-                    "14": "=CLEAN(\"{{replace(21.body.quoted_status.full_text; \"\"\"\"; \"'\")}}\")",
+                    "14": " {{21.body.quoted_status.full_text}} ",
                     "15": "{{21.body.quoted_status.user.screen_name}}",
                     "16": "{{21.body.quoted_status.user.name}}",
                     "17": "{{21.body.id_str}}"
