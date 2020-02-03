@@ -4,5 +4,5 @@ import pandas as pd
 print('Downloading likes detailed data from Twitter API')
 likes = get_all_statuses()
 df = create_df_statuses(likes)
-df.to_csv('likes.csv')
+df.to_csv('data/likes.csv')
 print('Likes saved in data/likes.csv')
