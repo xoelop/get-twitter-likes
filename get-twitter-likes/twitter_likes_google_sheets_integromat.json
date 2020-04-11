@@ -1,0 +1,526 @@
+{
+    "name": "Save new liked tweets to Google Sheet ",
+    "flow": [
+        {
+            "id": 19,
+            "module": "twitter:watchLikes",
+            "version": 5,
+            "parameters": {
+                "__IMTCONN__": 668739,
+                "select": "screenName",
+                "include_entities": true,
+                "limit": 100,
+                "screen_name": "xoelipedes"
+            },
+            "mapper": {},
+            "metadata": {
+                "designer": {
+                    "x": -146,
+                    "y": -1
+                },
+                "restore": {
+                    "__IMTCONN__": {
+                        "label": "@xoelipedes xoel V1 (Xoel)"
+                    },
+                    "select": {
+                        "label": "By Screen Name"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account",
+                        "label": "Connection",
+                        "required": true
+                    },
+                    {
+                        "name": "select",
+                        "type": "select",
+                        "label": "List Likes",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "userID",
+                                "screenName"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "include_entities",
+                        "type": "boolean",
+                        "label": "Include Entities",
+                        "required": true
+                    },
+                    {
+                        "name": "limit",
+                        "type": "uinteger",
+                        "label": "Limit",
+                        "required": true
+                    },
+                    {
+                        "name": "screen_name",
+                        "type": "text",
+                        "label": "Screen Name"
+                    }
+                ],
+                "advanced": true
+            }
+        },
+        {
+            "id": 21,
+            "module": "twitter:makeApiCall",
+            "version": 5,
+            "parameters": {
+                "__IMTCONN__": 668739
+            },
+            "mapper": {
+                "qs": [
+                    {
+                        "key": "trim_user",
+                        "value": "false"
+                    },
+                    {
+                        "key": "include_entities",
+                        "value": "true"
+                    },
+                    {
+                        "key": "tweet_mode",
+                        "value": "extended"
+                    },
+                    {
+                        "key": "id",
+                        "value": "{{19.id_str}}"
+                    }
+                ],
+                "url": "/1.1/statuses/show.json",
+                "domain": "api",
+                "method": "GET",
+                "headers": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ]
+            },
+            "metadata": {
+                "designer": {
+                    "x": 184,
+                    "y": -1,
+                    "name": "Get tweet full version"
+                },
+                "restore": {
+                    "qs": {
+                        "mode": "chose",
+                        "items": [
+                            "undefined",
+                            "undefined",
+                            "undefined",
+                            "undefined"
+                        ]
+                    },
+                    "domain": {
+                        "label": "https://api.twitter.com"
+                    },
+                    "method": {
+                        "mode": "chose",
+                        "label": "GET"
+                    },
+                    "headers": {
+                        "mode": "chose",
+                        "items": [
+                            "undefined"
+                        ]
+                    },
+                    "__IMTCONN__": {
+                        "label": "@xoelipedes xoel V1 (Xoel)"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "domain",
+                        "type": "select",
+                        "label": "Select Domain",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "api",
+                                "ads-api",
+                                "upload",
+                                "other"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "url",
+                        "type": "text",
+                        "label": "URL",
+                        "required": true
+                    },
+                    {
+                        "name": "method",
+                        "type": "select",
+                        "label": "Method",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "PATCH",
+                                "DELETE"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "headers",
+                        "spec": [
+                            {
+                                "name": "key",
+                                "type": "text",
+                                "label": "Key"
+                            },
+                            {
+                                "name": "value",
+                                "type": "text",
+                                "label": "Value"
+                            }
+                        ],
+                        "type": "array",
+                        "label": "Headers"
+                    },
+                    {
+                        "name": "qs",
+                        "spec": [
+                            {
+                                "name": "key",
+                                "type": "text",
+                                "label": "Key"
+                            },
+                            {
+                                "name": "value",
+                                "type": "text",
+                                "label": "Value"
+                            }
+                        ],
+                        "type": "array",
+                        "label": "Query String"
+                    },
+                    {
+                        "name": "body",
+                        "type": "any",
+                        "label": "Body"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 10,
+            "module": "google-sheets:addRow",
+            "version": 2,
+            "parameters": {
+                "__IMTCONN__": 570745
+            },
+            "mapper": {
+                "mode": "select",
+                "valueInputOption": "USER_ENTERED",
+                "insertDataOption": "INSERT_ROWS",
+                "spreadsheetId": "1dLG_QzCPasfkfQ9R9xsgFSE-ofQO3JUTxmaHwsDw5Kc",
+                "sheetId": "likes",
+                "includesHeaders": true,
+                "values": {
+                    "0": "{{parseDate(21.body.created_at; \"ddd MMM DD HH:mm:ss Z YYYY\")}}",
+                    "1": "= HYPERLINK(\"https://twitter.com/{{21.body.user.screen_name}}/status/{{21.body.id_str}}\")",
+                    "2": "=IMAGE(\"{{replace(21.body.user.profile_image_url_https; \"normal.jpg\"; \"200x200.jpg\")}}\",1)",
+                    "3": "= HYPERLINK(\"https://twitter.com/{{21.body.user.screen_name}}\", \"@{{21.body.user.screen_name}}\")",
+                    "4": "{{21.body.full_text}}",
+                    "5": "=IMAGE(\"{{get(21.body.entities; \"media.1.media_url_https\")}}\", 1)",
+                    "6": "{{21.body.user.name}}",
+                    "7": "{{21.body.user.location}}",
+                    "8": "{{21.body.user.description}}",
+                    "9": "{{get(21.body.entities.urls; \"1.expanded_url\")}}",
+                    "10": "{{21.body.favorite_count}}",
+                    "11": "{{21.body.retweet_count}}",
+                    "12": "{{21.body.user.followers_count}}",
+                    "13": "=IMAGE(\"{{replace(21.body.quoted_status.user.profile_image_url_https; \"normal.jpg\"; \"200x200.jpg\")}}\",1)",
+                    "14": "{{21.body.quoted_status.full_text}}",
+                    "15": "{{21.body.quoted_status.user.screen_name}}",
+                    "16": "{{21.body.quoted_status.user.name}}",
+                    "17": "{{21.body.id_str}}",
+                    "18": "=IFERROR(importxml({{19.entities.urls[].expanded_url}},\"//meta[@name='description']/@content\"),\"\")"
+                }
+            },
+            "metadata": {
+                "designer": {
+                    "x": 493,
+                    "y": 3
+                },
+                "restore": {
+                    "__IMTCONN__": {
+                        "label": "My Google connection (xoelop@gmail.com)"
+                    },
+                    "mode": {
+                        "label": "Select spreadsheet and sheet"
+                    },
+                    "valueInputOption": {
+                        "mode": "chose",
+                        "label": "User entered"
+                    },
+                    "insertDataOption": {
+                        "mode": "chose",
+                        "label": "Insert rows"
+                    },
+                    "spreadsheetId": {
+                        "label": "Twitter likes xoelipedes"
+                    },
+                    "sheetId": {
+                        "label": "likes"
+                    },
+                    "includesHeaders": {
+                        "label": "Yes"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "mode",
+                        "type": "select",
+                        "label": "Mode",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "select",
+                                "map"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "valueInputOption",
+                        "type": "select",
+                        "label": "Value input option",
+                        "validate": {
+                            "enum": [
+                                "USER_ENTERED",
+                                "RAW"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "insertDataOption",
+                        "type": "select",
+                        "label": "Insert data option",
+                        "validate": {
+                            "enum": [
+                                "INSERT_ROWS",
+                                "OVERWRITE"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "spreadsheetId",
+                        "type": "select",
+                        "label": "Spreadsheet",
+                        "required": true
+                    },
+                    {
+                        "name": "sheetId",
+                        "type": "select",
+                        "label": "Sheet",
+                        "required": true
+                    },
+                    {
+                        "name": "includesHeaders",
+                        "type": "select",
+                        "label": "Table contains headers",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                true,
+                                false
+                            ]
+                        }
+                    },
+                    {
+                        "name": "values",
+                        "type": "collection",
+                        "label": "Values",
+                        "spec": [
+                            {
+                                "name": "0",
+                                "label": "Date (A)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "1",
+                                "label": "Tweet (B)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "2",
+                                "label": "User logo (C)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "3",
+                                "label": "User alias (D)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "4",
+                                "label": "Text (E)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "5",
+                                "label": "Media (F)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "6",
+                                "label": "User name (G)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "7",
+                                "label": "Location (H)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "8",
+                                "label": "User bio (I)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "9",
+                                "label": "URL (J)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "10",
+                                "label": "Likes (K)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "11",
+                                "label": "RTs (L)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "12",
+                                "label": "User follower count (M)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "13",
+                                "label": "Logo user quoted tweet (N)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "14",
+                                "label": "Quoted tweet text (O)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "15",
+                                "label": "User alias quoted (P)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "16",
+                                "label": "User name quoted (Q)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "17",
+                                "label": "ID (R)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "18",
+                                "label": "Description (S)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "19",
+                                "label": "(T)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "20",
+                                "label": "(U)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "21",
+                                "label": "(V)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "22",
+                                "label": "(W)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "23",
+                                "label": "(X)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "24",
+                                "label": "(Y)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "25",
+                                "label": "(Z)",
+                                "type": "text"
+                            },
+                            {
+                                "name": "26",
+                                "label": "(AA)",
+                                "type": "text"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
+    "metadata": {
+        "version": 1,
+        "scenario": {
+            "roundtrips": 1,
+            "maxErrors": 3,
+            "autoCommit": false,
+            "sequential": false,
+            "confidential": false,
+            "dataloss": false,
+            "dlq": false
+        },
+        "designer": {
+            "orphans": [],
+            "notes": [
+                {
+                    "id": 5,
+                    "text": "have still to figure out how to parse date",
+                    "filter": false
+                }
+            ]
+        },
+        "zone": "eu1.integromat.com"
+    }
+}
