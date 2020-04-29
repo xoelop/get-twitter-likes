@@ -123,9 +123,9 @@ def format_field_link(link: str = '', text: str = '', default_show: str = 'text'
             result = f'=HYPERLINK("{link}")'
     elif output_format == 'raw':
         if default_show == 'text':
-            result = text
+            result = text if text else link
         else:
-            result = link
+            result = link if link else text
     return result
 
 
@@ -158,6 +158,7 @@ def get_all_statuses(output_format: str = 'raw') -> List[dict]:
         statuses = get_statuses(tuple(ids_sublist))
         parsed_tweets = [parse_status(s, output_format=output_format) for s in statuses]
         result = result + parsed_tweets
+    assert len(result) > 0
     return result
 
 

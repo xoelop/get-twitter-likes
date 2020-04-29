@@ -72,8 +72,10 @@ psql \
 ```
 and enter the password of the DB to start a psql session. Then, in SQL, run
 ```
-\COPY likes FROM <csv_path>' DELIMITER ',' CSV HEADER;
+\COPY likes FROM '<csv_path>' DELIMITER ',' CSV HEADER;
 ```
 
 where `<csv_path>` is the full path of your CSV file, like `/Users/xoel/CODE/Projects/twitter_likes/data/likes_raw.csv`
 
+In my case, `\COPY likes FROM '/Users/xoel/CODE/Projects/twitter_likes/data/likes_raw.csv' DELIMITER ',' CSV HEADER;
+COPY 6472`
