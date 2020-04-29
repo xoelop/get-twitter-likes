@@ -42,7 +42,7 @@ And after taking this course, I created a Postgres DB on RDS to have the archive
 This is a project that doesn't involve heavy data engineering. The database has only one table, for my liked tweets, and is not normalized because the benefits of doing so don't outweight the downsides of having to do joins. Also, if I'm looking at the info about a tweet, I'll probably want to know all the data I have about it, so I'd have to rejoin the data at the end. 
 
 This is the structure of the table. It could be fine-tuned but it works well enough now
-
+```
          Column         |       Type        | Collation | Nullable | Default 
 ------------------------+-------------------+-----------+----------+---------
  date                   | character varying |           |          | 
@@ -63,7 +63,7 @@ This is the structure of the table. It could be fine-tuned but it works well eno
  user_alias_quoted      | character varying |           |          | 
  user_name_quoted       | character varying |           |          | 
  id                     | bigint            |           |          | 
-
+```
 ## Addressing Other Scenarios
 
 ### What would I do if the data was increased by 100x.
