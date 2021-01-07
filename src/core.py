@@ -1,18 +1,20 @@
+import concurrent.futures
 import json
 import os
 import sys
 from datetime import datetime
+import time
+from functools import partial
 from typing import List, Tuple
 
 import pandas as pd
 import requests
 import tweepy
 from dotenv import load_dotenv
+from lxml import etree, html
 from requests_html import HTMLSession
 from settings import ROOT_DIR
 from tqdm import tqdm
-from lxml import etree, html
-
 
 sys.path.append('..')
 
@@ -63,13 +65,18 @@ def get_description(tree) -> str:
     return get_xpath_results(tree, xpaths)
 
 
+def parallel_map(function, iterable, max_workers: int = 100, *args, **kwargs, ):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+        result = pool.map(partial(function, *args, **kwargs), iterable)
+        return list(result)
+
+
 def get_xpath_results(tree, xpaths) -> str:
     elements = set()
     for xpath in xpaths:
         try:
             xpath_results = tree.xpath(xpath)
-            for result in xpath_results:
-                elements.add(result)
+            elements.add(xpath_results[0])
         except IndexError:
             pass
 
@@ -101,11 +108,14 @@ def get_tweepy_api():
     return api
 
 
+api = get_tweepy_api()
+
+
 def parse_date(d: str) -> str:
     return datetime.strptime(d, '%a %b %d %H:%M:%S %z %Y').strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
 
-def parse_status(status: tweepy.Status, output_format: str = 'gsheets', parse_url: bool = False) -> List[dict]:
+def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url: bool = False) -> List[dict]:
     """
     Creates a dictionary with the fields I'm interested in to save from each tweet
 
@@ -157,7 +167,7 @@ def parse_status(status: tweepy.Status, output_format: str = 'gsheets', parse_ur
         'description': title_description.get('description'),
     }
     if hasattr(status, 'quoted_status'):
-        return [tweet_dict, parse_status(status.quoted_status, output_format=output_format)[0]]
+        return [tweet_dict, parse_tweet(status.quoted_status, output_format=output_format)[0]]
     else:
         return [tweet_dict]
 
@@ -199,23 +209,27 @@ def split_list_sublists(ids: List, chunksize: int = 100) -> List[List]:
     return ids_chunks
 
 
-def get_statuses(ids: List) -> List[tweepy.Status]:
-    api = get_tweepy_api()
-    statuses = api.statuses_lookup(ids, include_entities=True, tweet_mode='extended')
-    return statuses
-
-
 def get_all_statuses(input_file: str = 'data/like.js', output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
     ids = get_likes_ids(input_file)
     ids_lists = split_list_sublists(ids)
-    result = []
-    for ids_sublist in tqdm(ids_lists[:5]):
-        statuses = get_statuses(tuple(ids_sublist))
-        list_of_lists_of_parsed_tweets = [parse_status(s, output_format=output_format, parse_url=True) for s in statuses]
-        parsed_tweets = [status for list_of_parsed_tweets in list_of_lists_of_parsed_tweets
-                         for status in list_of_parsed_tweets]
-        result = result + parsed_tweets
+    start = time.time()
+    tweets_lists = parallel_map(parse_tweets, ids_lists, output_format=output_format, parse_urls=parse_urls)
+    print(f'Elapsed {time.time() - start:.2} seconds')
+    result = flatten_list(tweets_lists)
     return result
+
+
+def parse_tweets(statuses_ids: List[str], output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
+    statuses = api.statuses_lookup(statuses_ids, include_entities=True, tweet_mode='extended')
+    list_of_lists_of_parsed_tweets = parallel_map(parse_tweet,
+                                                  statuses,
+                                                  output_format=output_format,
+                                                  parse_url=parse_urls)
+    parsed_tweets = flatten_list(list_of_lists_of_parsed_tweets)
+    return parsed_tweets
+
+def flatten_list(l: List) -> List:
+    return [el for sublist in l for el in sublist]  
 
 
 def create_df_statuses(statuses: List[dict]) -> pd.DataFrame:
@@ -248,9 +262,18 @@ def replace_short_urls_in_text(entities: dict, text: str) -> str:
     for entity, values in entities.items():
         if isinstance(values, list):
             for el in values:
-                text = text.replace(el.get('url', ''), el.get('expanded_url', ''))
+                text = replace_urls(el, text)
         elif isinstance(values, dict):
             for k, v in values.items():
                 for el in v:
-                    text = text.replace(el.get('url', ''), el.get('expanded_url', ''))
+                    text = replace_urls(el, text)
+    return text
+
+
+def replace_urls(el: dict, text: str) -> str:
+    short_url = el.get('url', '')
+    expanded_url = el.get('expanded_url', '')
+    if not isinstance(short_url, str) or not isinstance(expanded_url, str):
+        return text
+    text = text.replace(short_url, expanded_url)
     return text

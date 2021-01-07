@@ -1,6 +1,6 @@
 import pytest
 import tweepy
-from src.core import get_tweepy_api, get_url_title_description, parse_date, get_likes_ids, parse_status, replace_short_urls_in_text, split_list_sublists
+from src.core import get_tweepy_api, get_url_title_description, parse_date, get_likes_ids, parse_tweet, replace_short_urls_in_text, split_list_sublists
 import numpy as np
 
 api = get_tweepy_api()
@@ -52,6 +52,6 @@ def test_get_url_title_description(url):
 def test_parse_tweet_quoted():
     tweet_id_with_quoted_tweet = '1220246340510203904'
     tweet = api.get_status(tweet_id_with_quoted_tweet, tweet_mode='extended')
-    parsed_status = parse_status(tweet, parse_url=False)
+    parsed_status = parse_tweet(tweet, parse_url=False)
     assert len(parsed_status) > 1
     assert type(parsed_status[0]) == type(parsed_status[1])

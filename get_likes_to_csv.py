@@ -19,14 +19,13 @@ if __name__ == "__main__":
     output_file = args.output
     output_format = args.format
     parse_urls = args.parse_urls
-    print(parse_urls)
-    print(args)
+    # print(args)
 
-    print('Downloading likes detailed data from Twitter API')
+    print('Downloading likes detailed data from Twitter API and parsing their URLs')
     likes = get_all_statuses(input_file=input_file,
                              output_format=output_format,
                              parse_urls=parse_urls)
-    print(len(likes), 'likes in total')
+    print(len(likes), 'likes parsed in total')
     df = create_df_statuses(likes)
     df.to_csv(output_file, index=False)
     print(f'Likes saved in {output_file}')
