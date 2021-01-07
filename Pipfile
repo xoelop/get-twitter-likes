@@ -19,6 +19,8 @@ psycopg2 = "*"
 requests-cache = "*"
 requests-html = "*"
 lxml = "*"
+fastcore = "*"
+fastprogress = "*"
 
 [requires]
 python_version = "3.9"

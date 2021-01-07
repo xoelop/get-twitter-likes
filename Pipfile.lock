@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "c6167cdf58d8429a23b4e8fd34bcb9e742ce28fb4e02018798dbf61731d0f0b1"
+            "sha256": "c73f77fb292047a2f592414f9f4fb58f826f525992f193bcd77ecdd21297ef35"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -198,6 +198,22 @@
                 "sha256:c104998b750eb097eefc28ae28e92d66397598d2cf41a31aa45d5559ef1adf35"
             ],
             "version": "==0.1.11"
+        },
+        "fastcore": {
+            "hashes": [
+                "sha256:7b2bcad464e3597a4d4fd94d63040551fbf3550cca33fc69c1351b670af873ae",
+                "sha256:8d5bcd18209f6eae4224e1a5d0af08741d06bb054124cad156c89478c0d28450"
+            ],
+            "index": "pypi",
+            "version": "==1.3.16"
+        },
+        "fastprogress": {
+            "hashes": [
+                "sha256:474cd6a6e5b1c29a02383d709bf71f502477d0849bddc6ba5aa80b683f4ad16f",
+                "sha256:89e28ac1d2a5412aab18ee3f3dfd1ee8b5c1f2f7a44d0add0d0d4f69f0191bfe"
+            ],
+            "index": "pypi",
+            "version": "==1.0.0"
         },
         "idna": {
             "hashes": [
@@ -679,7 +695,7 @@
                 "sha256:92d0e91b60c28e3bd1e3dd832ec2ab81dba842b601822e92ce7c9f500f4aa4ae",
                 "sha256:d1bcc61575ff788249d3bcaee696d856fa1153401a5428cb7376d826dd68dd9b"
             ],
-            "markers": "python_full_version >= '3.6.1' and python_full_version < '4.0.0'",
+            "markers": "python_version < '4' and python_full_version >= '3.6.1'",
             "version": "==0.2.4"
         },
         "pyquery": {
@@ -994,7 +1010,7 @@
                 "sha256:19188f96923873c92ccb987120ec4acaa12f0461fa9ce5d3d0772bc965a39e08",
                 "sha256:d8ff90d979214d7b4f8ce956e80f4028fc6860e4431f731ea4a8c08f23f99473"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_full_version < '4.0.0'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
             "version": "==1.26.2"
         },
         "w3lib": {

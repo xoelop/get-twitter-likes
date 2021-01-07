@@ -16,6 +16,8 @@ from requests_html import HTMLSession
 from settings import ROOT_DIR
 from tqdm import tqdm
 
+from fastcore.parallel import parallel
+
 sys.path.append('..')
 
 load_dotenv()
@@ -213,8 +215,8 @@ def get_all_statuses(input_file: str = 'data/like.js', output_format: str = 'raw
     ids = get_likes_ids(input_file)
     ids_lists = split_list_sublists(ids)
     start = time.time()
-    tweets_lists = parallel_map(parse_tweets, ids_lists, output_format=output_format, parse_urls=parse_urls)
-    print(f'Elapsed {time.time() - start:.2} seconds')
+    tweets_lists = parallel(parse_tweets, ids_lists, output_format=output_format, parse_urls=parse_urls, progress=True, threadpool=True, n_workers=100)
+    print(f'Elapsed {time.time() - start:.2f} seconds')
     result = flatten_list(tweets_lists)
     return result
 
