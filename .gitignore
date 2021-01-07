@@ -3,3 +3,10 @@
 .ipynb_checkpoints
 .pytest_cache
 __pycache__
+cache.sqlite
+
+# exclude everything in /data
+data/*
+# except these 2 files
+!data/like_example.js
+!data/likes_example.csv

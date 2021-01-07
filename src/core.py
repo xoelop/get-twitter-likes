@@ -1,32 +1,89 @@
-# %%
-
 import json
 import os
 import sys
 from datetime import datetime
-from functools import lru_cache
 from typing import List, Tuple
 
 import pandas as pd
+import requests
 import tweepy
 from dotenv import load_dotenv
-from pandas.io.json import json_normalize
+from requests_html import HTMLSession
+from settings import ROOT_DIR
 from tqdm import tqdm
+from lxml import etree, html
 
-from config import ROOT_DIR
 
 sys.path.append('..')
 
 load_dotenv()
 
 
-def get_likes_ids():
-    with open(f'{ROOT_DIR}/data/like.js') as dataFile:
-        data = dataFile.read()
+def get_url_title_description(url: str, parse_url: bool = True) -> dict:
+    default_result = {
+        'title': '',
+        'description': ''
+    }
+    if not url or not parse_url:
+        return default_result
+    try:
+        response = requests.get(url, timeout=3)
+        content_type = response.headers.get('Content-Type', 'text/html')
+        if 'html' in content_type.lower():
+            try:
+                tree = html.document_fromstring(response.content.decode('UTF-8', 'ignore'))
+                result = {
+                    'title': get_title(tree),
+                    'description': get_description(tree)
+                }
+            except (etree.ParserError, ValueError) as e:
+                return default_result
+        else:
+            result = default_result
+
+    except requests.exceptions.RequestException as e:
+        return default_result
+    return result
+
+
+def get_title(tree) -> str:
+    xpaths = [
+        '//title/text()[1]',
+        "//meta[@name='title']/@content",
+        "//meta[@property='og:title']/@content"
+    ]
+    return get_xpath_results(tree, xpaths)
+
+
+def get_description(tree) -> str:
+    xpaths = [
+        "//meta[@name='description']/@content",
+        "//meta[@property='og:description']/@content",
+    ]
+    return get_xpath_results(tree, xpaths)
+
+
+def get_xpath_results(tree, xpaths) -> str:
+    elements = set()
+    for xpath in xpaths:
+        try:
+            xpath_results = tree.xpath(xpath)
+            for result in xpath_results:
+                elements.add(result)
+        except IndexError:
+            pass
+
+    elements = list(elements)
+    return ' '.join(elements)
+
+
+def get_likes_ids(relative_likes_js_path: str):
+    input_abs_path = os.path.join(ROOT_DIR, relative_likes_js_path)
+    with open(input_abs_path) as input_json:
+        data = input_json.read()
         obj = data[data.find('['): data.rfind(']')+1]
         likes = json.loads(obj)
         ids = [l['like']['tweetId'] for l in likes]
-
     return ids
 
 
@@ -48,7 +105,7 @@ def parse_date(d: str) -> str:
     return datetime.strptime(d, '%a %b %d %H:%M:%S %z %Y').strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
 
-def parse_status(status: tweepy.Status, output_format: str = 'gsheets') -> dict:
+def parse_status(status: tweepy.Status, output_format: str = 'gsheets', parse_url: bool = False) -> List[dict]:
     """
     Creates a dictionary with the fields I'm interested in to save from each tweet
 
@@ -66,48 +123,47 @@ def parse_status(status: tweepy.Status, output_format: str = 'gsheets') -> dict:
     except IndexError:
         media_url_https = ''
     try:
-        url = s.get('entities', {}).get('urls', [])[0]['expanded_url']
+        url = s.get('entities', {}).get('urls', [])[-1]['expanded_url']
     except IndexError:
         url = ''
+    title_description = get_url_title_description(url, parse_url=parse_url)
     try:
-        quoted_status_user_logo = format_field_image(
-            status.quoted_status.user.profile_image_url_https.replace("normal.jpg", "200x200.jpg"),
-            output_format=output_format)
-        quoted_status_tweet = format_field_text(status.quoted_status.full_text,
-                                                output_format=output_format)
-        quoted_user_alias = status.quoted_status.user.screen_name
-        quoted_user_name = status.quoted_status.user.name
+        quoted_status_id = status.quoted_status.id
     except AttributeError:  # no quoted tweet
-        quoted_status_user_logo = quoted_status_tweet = quoted_user_alias = quoted_user_name = ''
+        quoted_status_id = ''
 
-    result = {
-        'Date': parse_date(s['created_at']),
-        'ID': status.id_str,
-        'Tweet': format_field_link(tweet_link, output_format=output_format),
-        'User logo': format_field_image(logo_user_url, output_format=output_format),
+    tweet_dict = {
+        'date': parse_date(s['created_at']),
+        'id': status.id_str,
+        'link': format_field_link(tweet_link, output_format=output_format),
+        'user_logo': format_field_image(logo_user_url, output_format=output_format),
         # 'User alias': f'=HYPERLINK("https://twitter.com/{user_alias}", "@{user_alias}")',
-        'User alias': format_field_link(link=f'https://twitter.com/{user_alias}',
+        'screenname': format_field_link(link=f'https://twitter.com/{user_alias}',
                                         text=user_alias,
                                         default_show='text',
                                         output_format=output_format),
-        'Text': format_field_text(s["full_text"], output_format=output_format),
-        'Media': format_field_image(media_url_https, output_format=output_format),
-        'User name': status.user.name,
-        'Location': status.user.location,
-        'User bio': status.user.description,
-        'URL': url,
-        'Likes': status.favorite_count,
-        'RTs': status.retweet_count,
-        'User follower count': status.user.followers_count,
-        'Logo user quoted tweet': quoted_status_user_logo,
-        'Quoted tweet text': quoted_status_tweet,
-        'User alias quoted': quoted_user_alias,
-        'User name quoted': quoted_user_name,
+        'full_text': replace_short_urls_in_text(status.entities, status.full_text),
+        'media': format_field_image(media_url_https, output_format=output_format),
+        'username': status.user.name,
+        'location': status.user.location,
+        'bio': replace_short_urls_in_text(status.user.entities, status.user.description),
+        'url': url,
+        'likes': status.favorite_count,
+        'rts': status.retweet_count,
+        'user_follower_count': status.user.followers_count,
+        'quoted_status_id': quoted_status_id,
+        'json': s,
+        'title': title_description.get('title'),
+        'description': title_description.get('description'),
     }
-    return result
+    if hasattr(status, 'quoted_status'):
+        return [tweet_dict, parse_status(status.quoted_status, output_format=output_format)[0]]
+    else:
+        return [tweet_dict]
 
 
 def format_field_image(value, output_format: str = 'gsheets'):
+    value = value.replace('_normal', '_400x400').replace('_200x200', '_400x400')
     if output_format == 'gsheets':
         result = f'=IMAGE("{value}", 1)'
     elif output_format == 'raw':
@@ -137,52 +193,64 @@ def format_field_text(text: str, output_format: str = 'gsheets'):
     return result
 
 
-def split_list_sublists(ids: List) -> List[List]:
-    """Return a list of lists such that the max len of the inner lists is 100"""
-    ids_chunks = [ids[i*100:i*100+100] for i in range(int(len(ids)/100) + 1)]
+def split_list_sublists(ids: List, chunksize: int = 100) -> List[List]:
+    """Return a list of lists such that the max len of the inner lists is chunksize"""
+    ids_chunks = [ids[i*chunksize:i*chunksize+chunksize] for i in range(int(len(ids)/chunksize) + 1)]
     return ids_chunks
 
 
-@lru_cache(maxsize=200)
-def get_statuses(ids: Tuple) -> List[tweepy.Status]:
+def get_statuses(ids: List) -> List[tweepy.Status]:
     api = get_tweepy_api()
     statuses = api.statuses_lookup(ids, include_entities=True, tweet_mode='extended')
     return statuses
 
 
-def get_all_statuses(output_format: str = 'raw') -> List[dict]:
-    ids = get_likes_ids()
+def get_all_statuses(input_file: str = 'data/like.js', output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
+    ids = get_likes_ids(input_file)
     ids_lists = split_list_sublists(ids)
     result = []
-    for ids_sublist in tqdm(ids_lists):
+    for ids_sublist in tqdm(ids_lists[:5]):
         statuses = get_statuses(tuple(ids_sublist))
-        parsed_tweets = [parse_status(s, output_format=output_format) for s in statuses]
+        list_of_lists_of_parsed_tweets = [parse_status(s, output_format=output_format, parse_url=True) for s in statuses]
+        parsed_tweets = [status for list_of_parsed_tweets in list_of_lists_of_parsed_tweets
+                         for status in list_of_parsed_tweets]
         result = result + parsed_tweets
-    assert len(result) > 0
     return result
 
 
 def create_df_statuses(statuses: List[dict]) -> pd.DataFrame:
     df = pd.DataFrame(statuses)
     columns = [
-        'Date',
-        'Tweet',
-        'User logo',
-        'User alias',
-        'Text',
-        'Media',
-        'User name',
-        'Location',
-        'User bio',
-        'URL',
-        'Likes',
-        'RTs',
-        'User follower count',
-        'Logo user quoted tweet',
-        'Quoted tweet text',
-        'User alias quoted',
-        'User name quoted',
-        'ID',
+        'date',
+        'link',
+        'user_logo',
+        'screenname',
+        'full_text',
+        'media',
+        'username',
+        'location',
+        'bio',
+        'url',
+        'title',
+        'description',
+        'likes',
+        'rts',
+        'user_follower_count',
+        'quoted_status_id',
+        'id',
+        # 'json'
     ]
     df = df.reindex(labels=columns, axis=1)
     return df
+
+
+def replace_short_urls_in_text(entities: dict, text: str) -> str:
+    for entity, values in entities.items():
+        if isinstance(values, list):
+            for el in values:
+                text = text.replace(el.get('url', ''), el.get('expanded_url', ''))
+        elif isinstance(values, dict):
+            for k, v in values.items():
+                for el in v:
+                    text = text.replace(el.get('url', ''), el.get('expanded_url', ''))
+    return text
