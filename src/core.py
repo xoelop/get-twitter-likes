@@ -1,9 +1,10 @@
 import concurrent.futures
 import json
 import os
+import re
 import sys
-from datetime import datetime
 import time
+from datetime import datetime
 from functools import partial
 from typing import List, Tuple
 
@@ -11,12 +12,11 @@ import pandas as pd
 import requests
 import tweepy
 from dotenv import load_dotenv
+from fastcore.parallel import parallel
 from lxml import etree, html
 from requests_html import HTMLSession
 from settings import ROOT_DIR
 from tqdm import tqdm
-
-from fastcore.parallel import parallel
 
 sys.path.append('..')
 
@@ -78,16 +78,20 @@ def get_xpath_results(tree, xpaths) -> str:
     for xpath in xpaths:
         try:
             xpath_results = tree.xpath(xpath)
-            elements.add(xpath_results[0])
+            for result in xpath_results:
+                elements.add(result)
         except IndexError:
             pass
 
     elements = list(elements)
-    return ' '.join(elements)
+    result = ' '.join(elements)
+    result = re.sub(r'\s', ' ', result)
+    return result
 
 
 def get_likes_ids(relative_likes_js_path: str):
     input_abs_path = os.path.join(ROOT_DIR, relative_likes_js_path)
+    print(f'Reading likes from {input_abs_path}')
     with open(input_abs_path) as input_json:
         data = input_json.read()
         obj = data[data.find('['): data.rfind(']')+1]
@@ -154,7 +158,7 @@ def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url
                                         text=user_alias,
                                         default_show='text',
                                         output_format=output_format),
-        'full_text': replace_short_urls_in_text(status.entities, status.full_text),
+        'tweet_text': replace_short_urls_in_text(status.entities, status.full_text),
         'media': format_field_image(media_url_https, output_format=output_format),
         'username': status.user.name,
         'location': status.user.location,
@@ -168,6 +172,7 @@ def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url
         'title': title_description.get('title'),
         'description': title_description.get('description'),
     }
+    tweet_dict['text'] = ' '.join(set(tweet_dict.get(key, '') for key in ['tweet_text', 'title', 'description']))
     if hasattr(status, 'quoted_status'):
         return [tweet_dict, parse_tweet(status.quoted_status, output_format=output_format)[0]]
     else:
@@ -213,7 +218,8 @@ def split_list_sublists(ids: List, chunksize: int = 100) -> List[List]:
 
 def get_all_statuses(input_file: str = 'data/like.js', output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
     ids = get_likes_ids(input_file)
-    ids_lists = split_list_sublists(ids)
+    ids_lists = split_list_sublists(ids)[:3]
+    print('Downloading likes detailed data from Twitter API and parsing their URLs')
     start = time.time()
     tweets_lists = parallel(parse_tweets, ids_lists, output_format=output_format, parse_urls=parse_urls, progress=True, threadpool=True, n_workers=100)
     print(f'Elapsed {time.time() - start:.2f} seconds')
@@ -241,7 +247,8 @@ def create_df_statuses(statuses: List[dict]) -> pd.DataFrame:
         'link',
         'user_logo',
         'screenname',
-        'full_text',
+        'tweet_text',
+        'text',
         'media',
         'username',
         'location',
@@ -254,7 +261,7 @@ def create_df_statuses(statuses: List[dict]) -> pd.DataFrame:
         'user_follower_count',
         'quoted_status_id',
         'id',
-        # 'json'
+        'json'
     ]
     df = df.reindex(labels=columns, axis=1)
     return df

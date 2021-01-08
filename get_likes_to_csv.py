@@ -21,7 +21,6 @@ if __name__ == "__main__":
     parse_urls = args.parse_urls
     # print(args)
 
-    print('Downloading likes detailed data from Twitter API and parsing their URLs')
     likes = get_all_statuses(input_file=input_file,
                              output_format=output_format,
                              parse_urls=parse_urls)
