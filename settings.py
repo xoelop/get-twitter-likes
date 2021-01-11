@@ -1,8 +1,9 @@
 import os
 
-import requests_cache
+from dotenv import load_dotenv
 
-requests_cache.install_cache(backend='sqlite', expire_after=700000)  # ~8 days
+load_dotenv()
+
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # This is your Project Root
 
