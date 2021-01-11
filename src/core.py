@@ -296,3 +296,23 @@ def replace_urls(el: dict, text: str) -> str:
         return text
     text = text.replace(short_url, expanded_url)
     return text
+
+
+def get_latest_likes(parse_urls: bool = True):
+    likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended')
+    parsed_tweets = parse_tweets(likes, output_format='raw', parse_urls=parse_urls)
+    only_new_likes = delete_likes_already_saved(parsed_tweets)
+    return only_new_likes
+
+
+def delete_likes_already_saved(likes: List) -> List:
+    ids_saved_likes = get_all_likes_ids()
+    ids_saved_likes_str = [str(l) for l in ids_saved_likes]
+    result = [l for l in likes if not l['id'] in ids_saved_likes_str]
+    return result
+
+
+def save_latest_likes_csv(parse_urls: bool = True, save_json_col: bool = True, output: str = 'data/latest_likes.csv'):
+    likes = get_latest_likes(parse_urls)
+    df = create_df_statuses(likes, save_json_col, output=output)
+    return df
