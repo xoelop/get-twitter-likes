@@ -1,92 +1,21 @@
-import concurrent.futures
 import json
 import os
 import re
 import sys
 import time
 from datetime import datetime
-from functools import partial
-from typing import List, Tuple
+from typing import List
 
 import pandas as pd
-import requests
+import requests_cache
 import tweepy
-from dotenv import load_dotenv
 from fastcore.parallel import parallel
-from lxml import etree, html
-from requests_html import HTMLSession
+from requests.api import delete
 from settings import ROOT_DIR
-from tqdm import tqdm
 
-sys.path.append('..')
-
-load_dotenv()
-
-
-def get_url_title_description(url: str, parse_url: bool = True) -> dict:
-    default_result = {
-        'title': '',
-        'description': ''
-    }
-    if not url or not parse_url:
-        return default_result
-    try:
-        response = requests.get(url, timeout=3)
-        content_type = response.headers.get('Content-Type', 'text/html')
-        if 'html' in content_type.lower():
-            try:
-                tree = html.document_fromstring(response.content.decode('UTF-8', 'ignore'))
-                result = {
-                    'title': get_title(tree),
-                    'description': get_description(tree)
-                }
-            except (etree.ParserError, ValueError) as e:
-                return default_result
-        else:
-            result = default_result
-
-    except requests.exceptions.RequestException as e:
-        return default_result
-    return result
-
-
-def get_title(tree) -> str:
-    xpaths = [
-        '//title/text()[1]',
-        "//meta[@name='title']/@content",
-        "//meta[@property='og:title']/@content"
-    ]
-    return get_xpath_results(tree, xpaths)
-
-
-def get_description(tree) -> str:
-    xpaths = [
-        "//meta[@name='description']/@content",
-        "//meta[@property='og:description']/@content",
-    ]
-    return get_xpath_results(tree, xpaths)
-
-
-def parallel_map(function, iterable, max_workers: int = 100, *args, **kwargs, ):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-        result = pool.map(partial(function, *args, **kwargs), iterable)
-        return list(result)
-
-
-def get_xpath_results(tree, xpaths) -> str:
-    elements = set()
-    for xpath in xpaths:
-        try:
-            xpath_results = tree.xpath(xpath)
-            for result in xpath_results:
-                elements.add(result)
-        except IndexError:
-            pass
-
-    elements = list(elements)
-    result = ' '.join(elements)
-    result = re.sub(r'\s', ' ', result)
-    return result
+from src.scraping import get_url_title_description
+from src.tinybird import get_all_likes_ids
+from src.utils import flatten_list, parallel_map, split_list_sublists
 
 
 def get_likes_ids(relative_likes_js_path: str):
@@ -176,13 +105,13 @@ def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url
         'url': url,
         'likes': status.favorite_count,
         'rts': status.retweet_count,
-        'user_follower_count': status.user.followers_count,
+        'num_followers': status.user.followers_count,
         'quoted_status_id': quoted_status_id,
-        'json': s,
+        'json': json.dumps(s),
         'title': title_description.get('title'),
         'description': title_description.get('description'),
     }
-    tweet_dict['text'] = ' '.join(set(tweet_dict.get(key, '') for key in ['tweet_text', 'title', 'description']))
+    tweet_dict['text'] = '\n______\n'.join([el for el in [tweet_dict.get(key, '') for key in ['tweet_text', 'title', 'description']] if el])
     if hasattr(status, 'quoted_status'):
         return [tweet_dict, parse_tweet(status.quoted_status, output_format=output_format)[0]]
     else:
@@ -220,25 +149,31 @@ def format_field_text(text: str, output_format: str = 'gsheets'):
     return result
 
 
-def split_list_sublists(ids: List, chunksize: int = 100) -> List[List]:
-    """Return a list of lists such that the max len of the inner lists is chunksize"""
-    ids_chunks = [ids[i*chunksize:i*chunksize+chunksize] for i in range(int(len(ids)/chunksize) + 1)]
-    return ids_chunks
-
-
 def get_all_statuses(input_file: str = 'data/like.js', output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
     ids = get_likes_ids(input_file)
-    ids_lists = split_list_sublists(ids)[:3]
+    ids_lists = split_list_sublists(ids)[:]
     print('Downloading likes detailed data from Twitter API and parsing their URLs')
     start = time.time()
-    tweets_lists = parallel(parse_tweets, ids_lists, output_format=output_format, parse_urls=parse_urls, progress=True, threadpool=True, n_workers=100)
+    # tweets_lists = []
+    # for l in ids_lists:
+    #     tweets_lists.append(lookup_and_parse_tweets(l, parse_urls=parse_urls, output_format=output_format))
+    tweets_lists = parallel(lookup_and_parse_tweets, ids_lists, output_format=output_format, parse_urls=parse_urls, progress=True, threadpool=True, n_workers=100)
     print(f'Elapsed {time.time() - start:.2f} seconds')
     result = flatten_list(tweets_lists)
     return result
 
 
-def parse_tweets(statuses_ids: List[str], output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
+def lookup_and_parse_tweets(statuses_ids: List[str], output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
+    requests_cache.install_cache(backend='sqlite', expire_after=700000)  # ~8 days
     statuses = api.statuses_lookup(statuses_ids, include_entities=True, tweet_mode='extended')
+    requests_cache.uninstall_cache()
+    parsed_tweets = parse_tweets(statuses, output_format=output_format, parse_urls=parse_urls)
+    return parsed_tweets
+
+
+def parse_tweets(statuses: List[tweepy.Status],
+                 output_format: str = 'raw',
+                 parse_urls: bool = False) -> List[dict]:
     list_of_lists_of_parsed_tweets = parallel_map(parse_tweet,
                                                   statuses,
                                                   output_format=output_format,
@@ -246,11 +181,8 @@ def parse_tweets(statuses_ids: List[str], output_format: str = 'raw', parse_urls
     parsed_tweets = flatten_list(list_of_lists_of_parsed_tweets)
     return parsed_tweets
 
-def flatten_list(l: List) -> List:
-    return [el for sublist in l for el in sublist]  
 
-
-def create_df_statuses(statuses: List[dict]) -> pd.DataFrame:
+def create_df_statuses(statuses: List[dict], save_json_col: bool = True, output: str = '') -> pd.DataFrame:
     df = pd.DataFrame(statuses)
     columns = [
         'date',
@@ -268,12 +200,16 @@ def create_df_statuses(statuses: List[dict]) -> pd.DataFrame:
         'description',
         'likes',
         'rts',
-        'user_follower_count',
+        'num_followers',
         'quoted_status_id',
         'id',
-        'json'
     ]
+    if save_json_col:
+        columns.append('json')
     df = df.reindex(labels=columns, axis=1)
+    if output:
+        df.to_csv(output, index=False)
+        print(f'Likes saved in {output}')
     return df
 
 
