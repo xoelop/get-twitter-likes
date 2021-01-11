@@ -47,6 +47,20 @@ This is how to get a CSV file containing info for all the tweets you've liked in
 
 
 
-## Saving the past likes in Google Sheets
-Just go to https://sheets.new to create a new Google spreadsheet. Then click on `File > Import > Upload` and select the CSV you've just created
+## Saving the past likes on Tinybird
 
+Go to https://ui.tinybird.com/login to create a Tinybird account
+
+Create a data source with your likes csv file called `twitter_likes`
+
+Create a pipe called `query_likes` containing these nodes
+
+// TODO
+
+Add your Tinybird admin token from https://ui.tinyibird.com/tokens to your .env file
+
+## Keeping your likes file updated on Tinybird
+
+Run `pipenv run python upload_latest_likes.py`
+
+// TODO
