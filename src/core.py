@@ -100,14 +100,24 @@ def get_likes_ids(relative_likes_js_path: str):
     return ids
 
 
-def get_tweepy_api():
-    consumer_key = os.getenv(f'TWITTER_CONSUMER_KEY')
-    consumer_secret = os.getenv(f'TWITTER_CONSUMER_SECRET')
-    access_token = os.getenv(f'TWITTER_ACCESS_TOKEN')
-    access_token_secret = os.getenv(f'TWITTER_ACCESS_TOKEN_SECRET')
+def get_tweepy_api(username: str = 'xoelipedes', mode='user'):
+    """
+    mode: str
+        'app': Auth as app, read-only. This way the rate limit for
+        searches is 450 per 15-min window
+        'user': Auth as user, to read and write. Rate limit for
+        searches: 180 per 15-min window
+    """
+    api_key = os.getenv(f'TWITTER_API_KEY_{username}')
+    api_secret = os.getenv(f'TWITTER_API_SECRET_{username}')
+    access_token = os.getenv(f'TWITTER_ACCESS_TOKEN_{username}')
+    access_token_secret = os.getenv(f'TWITTER_ACCESS_TOKEN_SECRET_{username}')
 
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
+    if mode == 'user':
+        auth = tweepy.OAuthHandler(api_key, api_secret)
+        auth.set_access_token(access_token, access_token_secret)
+    elif mode == 'app':
+        auth = tweepy.AppAuthHandler(api_key, api_secret)
 
     api = tweepy.API(auth)
 
