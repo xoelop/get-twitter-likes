@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-i', '--input', help='Input js file', default='data/like.js')
     parser.add_argument('-o', '--output', help='Destination file', default='data/likes.csv')
-    parser.add_argument('-f', '--format', help='Format of specific columns of the csv: raw or gsheets', default='gsheets')
+    parser.add_argument('-f', '--format', help='Format of specific columns of the csv: raw or gsheets', default='raw')
     parser.add_argument('-pu', '--parse-urls', action='store_true', default=False, help='Parse the URL of the tweets that have one')
     parser.add_argument('-j', '--save-json-col', action='store_true', default=False, help="Save a JSON column with all the tweet info")
     args = parser.parse_args()

@@ -19,17 +19,19 @@ This is how to get a CSV file containing info for all the tweets you've liked in
 3. Create a `.env` file in the root directory, containing your Twitter access tokens:
 
     ```
-    export TWITTER_CONSUMER_KEY=...
-    export TWITTER_CONSUMER_SECRET=...
-    export TWITTER_ACCESS_TOKEN=...
-    export TWITTER_ACCESS_TOKEN_SECRET=...
+    export TWITTER_API_KEY_your_username=...
+    export TWITTER_API_SECRET_your_username=...
+    export TWITTER_ACCESS_TOKEN_your_username=...
+    export TWITTER_ACCESS_TOKEN_SECRET_your_username=...
     ```
+
+    Replace `your_username` by your twitter username
 
 4. Run the main script: `pipenv run python get_likes_to_csv.py`
    
    Here are the available options:
     ```   
-    usage: get_likes_to_csv.py [-h] [-i INPUT] [-o OUTPUT] [-f FORMAT] [-pu]
+    usage: get_likes_to_csv.py [-h] [-i INPUT] [-o OUTPUT] [-f FORMAT] [-pu] [-j]
 
     optional arguments:
     -h, --help            show this help message and exit
@@ -38,7 +40,9 @@ This is how to get a CSV file containing info for all the tweets you've liked in
     -o OUTPUT, --output OUTPUT
                             Destination file (default: data/likes.csv)
     -f FORMAT, --format FORMAT
-                            Format of specific columns of the csv: raw or gsheets (default: gsheets)
+                            Format of specific columns of the csv: raw or gsheets (default: raw)
+    -pu, --parse-urls     Parse the URL of the tweets that have one (default: False)
+    -j, --save-json-col   Save a JSON column with all the tweet info (default: False)
     ```
 
     A new CSV file should have been created in `/data`. It'll be formated in a way that links and images display nicely in Google Sheets
