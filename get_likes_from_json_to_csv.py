@@ -1,9 +1,12 @@
 import argparse
+import json
 
 import pandas as pd
 
 import settings
 from src.core import create_df_statuses, get_likes_from_json
+from src.tinybird import append_likes_csv
+from src.utils import jprint
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -27,3 +30,5 @@ if __name__ == "__main__":
                                 parse_urls=parse_urls)
     print(len(likes), 'likes parsed in total')
     df = create_df_statuses(likes, save_json_col=args.save_json_col, output=output_file)
+    response = append_likes_csv(file=output_file)
+    jprint(json.loads(response.content))
