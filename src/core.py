@@ -113,8 +113,8 @@ def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url
         'title': title_description.get('title', ''),
         'description': title_description.get('description', ''),
     }
-    # if not tweet_dict['title']:
-    #     tweet_dict['title'] = s.get('quoted_status', {}).get('full_text', '')
+    if not tweet_dict['title']:
+        tweet_dict['title'] = s.get('quoted_status', {}).get('full_text', '')
     tweet_dict['text'] = '\n______\n'.join([el for el in [tweet_dict.get(key, '') for key in ['tweet_text', 'title', 'description']] if el])
     if hasattr(status, 'quoted_status'):
         return [tweet_dict, parse_tweet(status.quoted_status, output_format=output_format)[0]]
@@ -248,9 +248,9 @@ def replace_urls(el: dict, text: str) -> str:
 
 def get_latest_likes(parse_urls: bool = True, max_id: int = None):
     if max_id:
-        likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended', max_id=max_id)
+        likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended', max_id=max_id, include_entities=True)
     else:
-        likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended')
+        likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended', include_entities=True)
     parsed_tweets = parse_tweets(likes, output_format='raw', parse_urls=parse_urls)
     return parsed_tweets
 
