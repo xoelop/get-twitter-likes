@@ -1,6 +1,6 @@
 import pytest
 import tweepy
-from src.core import get_latest_likes, get_tweepy_api, get_url_title_description, parse_date, get_likes_ids, parse_tweet, replace_short_urls_in_text, split_list_sublists, get_latest_likes
+from src.core import get_latest_likes, get_likes, get_tweepy_api, get_url_title_description, parse_date, get_likes_ids, parse_tweet, replace_short_urls_in_text, split_list_sublists, get_latest_likes
 import numpy as np
 
 api = get_tweepy_api()
@@ -60,3 +60,8 @@ def test_parse_tweet_quoted():
 def test_get_latest_likes():
     latest_likes = get_latest_likes()
     assert latest_likes
+
+
+def test_get_likes():
+    likes = get_likes(max_calls=2)
+    assert len(likes) > 200

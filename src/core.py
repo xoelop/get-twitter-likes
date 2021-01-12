@@ -12,10 +12,12 @@ import tweepy
 from fastcore.parallel import parallel
 from requests.api import delete
 from settings import ROOT_DIR
+from tqdm import tqdm
 
 from src.scraping import get_url_title_description
 from src.tinybird import get_all_likes_ids
-from src.utils import flatten_list, parallel_map, split_list_sublists
+from src.utils import (delete_duplicates_by_key, flatten_list, parallel_map,
+                       split_list_sublists)
 
 
 def get_likes_ids(relative_likes_js_path: str):
@@ -108,9 +110,11 @@ def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url
         'num_followers': status.user.followers_count,
         'quoted_status_id': quoted_status_id,
         'json': json.dumps(s),
-        'title': title_description.get('title'),
-        'description': title_description.get('description'),
+        'title': title_description.get('title', ''),
+        'description': title_description.get('description', ''),
     }
+    # if not tweet_dict['title']:
+    #     tweet_dict['title'] = s.get('quoted_status', {}).get('full_text', '')
     tweet_dict['text'] = '\n______\n'.join([el for el in [tweet_dict.get(key, '') for key in ['tweet_text', 'title', 'description']] if el])
     if hasattr(status, 'quoted_status'):
         return [tweet_dict, parse_tweet(status.quoted_status, output_format=output_format)[0]]
@@ -149,7 +153,7 @@ def format_field_text(text: str, output_format: str = 'gsheets'):
     return result
 
 
-def get_all_statuses(input_file: str = 'data/like.js', output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
+def get_likes_from_json(input_file: str = 'data/like.js', output_format: str = 'raw', parse_urls: bool = False) -> List[dict]:
     ids = get_likes_ids(input_file)
     ids_lists = split_list_sublists(ids)[:]
     print('Downloading likes detailed data from Twitter API and parsing their URLs')
@@ -157,9 +161,17 @@ def get_all_statuses(input_file: str = 'data/like.js', output_format: str = 'raw
     # tweets_lists = []
     # for l in ids_lists:
     #     tweets_lists.append(lookup_and_parse_tweets(l, parse_urls=parse_urls, output_format=output_format))
-    tweets_lists = parallel(lookup_and_parse_tweets, ids_lists, output_format=output_format, parse_urls=parse_urls, progress=True, threadpool=True, n_workers=100)
+    tweets_lists = parallel(lookup_and_parse_tweets,
+                            ids_lists,
+                            output_format=output_format,
+                            parse_urls=parse_urls,
+                            progress=True,
+                            threadpool=True,
+                            n_workers=100,
+                            pause=0.01)
     print(f'Elapsed {time.time() - start:.2f} seconds')
     result = flatten_list(tweets_lists)
+    result = delete_likes_already_saved(result)
     return result
 
 
@@ -234,11 +246,27 @@ def replace_urls(el: dict, text: str) -> str:
     return text
 
 
-def get_latest_likes(parse_urls: bool = True):
-    likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended')
+def get_latest_likes(parse_urls: bool = True, max_id: int = None):
+    if max_id:
+        likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended', max_id=max_id)
+    else:
+        likes = api.favorites(screen_name='xoelipedes', count=200, tweet_mode='extended')
     parsed_tweets = parse_tweets(likes, output_format='raw', parse_urls=parse_urls)
-    only_new_likes = delete_likes_already_saved(parsed_tweets)
-    return only_new_likes
+    return parsed_tweets
+
+
+def get_likes(max_calls: int = 5, parse_urls: bool = True) -> List[dict]:
+    all_likes = []
+    max_id = None
+    for i in tqdm(range(max_calls)):
+        likes = get_latest_likes(parse_urls=parse_urls, max_id=max_id)
+        if not likes:
+            break
+        sorted_ids = sorted([int(l['id']) for l in likes])
+        max_id = sorted_ids[int(len(sorted_ids) * 0.05)]
+        all_likes.extend(likes)
+    result = delete_duplicates_by_key(all_likes, key='id')
+    return result
 
 
 def delete_likes_already_saved(likes: List) -> List:
@@ -248,7 +276,8 @@ def delete_likes_already_saved(likes: List) -> List:
     return result
 
 
-def save_latest_likes_csv(parse_urls: bool = True, save_json_col: bool = True, output: str = 'data/latest_likes.csv'):
-    likes = get_latest_likes(parse_urls)
+def save_latest_likes_csv(parse_urls: bool = True, save_json_col: bool = True, output: str = 'data/latest_likes.csv', max_calls: int = 1):
+    likes = get_likes(max_calls=max_calls, parse_urls=parse_urls)
+    likes = delete_likes_already_saved(likes)
     df = create_df_statuses(likes, save_json_col, output=output)
     return df

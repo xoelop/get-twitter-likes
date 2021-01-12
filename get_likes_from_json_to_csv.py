@@ -1,9 +1,9 @@
-from src.core import get_all_statuses, create_df_statuses, save_latest_likes_csv
-import pandas as pd
 import argparse
 
-import settings
+import pandas as pd
 
+import settings
+from src.core import create_df_statuses, get_likes_from_json
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -22,9 +22,8 @@ if __name__ == "__main__":
     parse_urls = args.parse_urls
     print(args)
 
-    likes = get_all_statuses(input_file=input_file,
-                             output_format=output_format,
-                             parse_urls=parse_urls)
+    likes = get_likes_from_json(input_file=input_file,
+                                output_format=output_format,
+                                parse_urls=parse_urls)
     print(len(likes), 'likes parsed in total')
     df = create_df_statuses(likes, save_json_col=args.save_json_col, output=output_file)
-    
