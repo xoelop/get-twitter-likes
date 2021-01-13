@@ -173,7 +173,6 @@ def get_likes_from_json(input_file: str = 'data/like.js', output_format: str = '
                             pause=0.01)
     print(f'Elapsed {time.time() - start:.2f} seconds')
     result = flatten_list(tweets_lists)
-    result = delete_likes_already_saved(result)
     return result
 
 
@@ -275,6 +274,5 @@ def get_likes(max_calls: int = 5, parse_urls: bool = True) -> List[dict]:
 def save_latest_likes_csv(parse_urls: bool = True, save_json_col: bool = True, output: str = 'data/latest_likes.csv', max_calls: int = 1):
     print(f'Downloading your latest ~{max_calls * 200} likes')
     likes = get_likes(max_calls=max_calls, parse_urls=parse_urls)
-    # likes = delete_likes_already_saved(likes)
     df = create_df_statuses(likes, save_json_col, output=output)
     return df
