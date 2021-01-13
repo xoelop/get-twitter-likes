@@ -31,4 +31,3 @@ if __name__ == "__main__":
     print(len(likes), 'likes parsed in total')
     df = create_df_statuses(likes, save_json_col=args.save_json_col, output=output_file)
     response = append_likes_csv(file=output_file)
-    jprint(json.loads(response.content))

@@ -1,4 +1,3 @@
-import json
 from src.utils import jprint
 from src.tinybird import append_likes_csv
 from src.core import get_likes_from_json, create_df_statuses, save_latest_likes_csv
@@ -28,5 +27,3 @@ if __name__ == "__main__":
                                output=output_file,
                                max_calls=max_calls)
     response = append_likes_csv(file=output_file)
-    jprint(json.loads(response.content))
-    # print(len(likes), 'likes parsed in total')

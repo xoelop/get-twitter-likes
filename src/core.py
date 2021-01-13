@@ -15,7 +15,6 @@ from settings import ROOT_DIR
 from tqdm import tqdm
 
 from src.scraping import get_url_title_description
-from src.tinybird import get_all_likes_ids
 from src.utils import (delete_duplicates_by_key, flatten_list, parallel_map,
                        split_list_sublists)
 
@@ -31,7 +30,7 @@ def get_likes_ids(relative_likes_js_path: str):
     return ids
 
 
-def get_tweepy_api(username: str = 'xoelipedes', mode='user'):
+def get_tweepy_api(mode='user'):
     """
     mode: str
         'app': Auth as app, read-only. This way the rate limit for
@@ -39,10 +38,10 @@ def get_tweepy_api(username: str = 'xoelipedes', mode='user'):
         'user': Auth as user, to read and write. Rate limit for
         searches: 180 per 15-min window
     """
-    api_key = os.getenv(f'TWITTER_API_KEY_{username}')
-    api_secret = os.getenv(f'TWITTER_API_SECRET_{username}')
-    access_token = os.getenv(f'TWITTER_ACCESS_TOKEN_{username}')
-    access_token_secret = os.getenv(f'TWITTER_ACCESS_TOKEN_SECRET_{username}')
+    api_key = os.getenv(f'TWITTER_API_KEY')
+    api_secret = os.getenv(f'TWITTER_API_SECRET')
+    access_token = os.getenv(f'TWITTER_ACCESS_TOKEN')
+    access_token_secret = os.getenv(f'TWITTER_ACCESS_TOKEN_SECRET')
 
     if mode == 'user':
         auth = tweepy.OAuthHandler(api_key, api_secret)
@@ -59,7 +58,7 @@ api = get_tweepy_api()
 
 
 def parse_date(d: str) -> str:
-    return datetime.strptime(d, '%a %b %d %H:%M:%S %z %Y').strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    return datetime.strptime(d, '%a %b %d %H:%M:%S %z %Y')
 
 
 def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url: bool = False) -> List[dict]:
@@ -112,6 +111,7 @@ def parse_tweet(status: tweepy.Status, output_format: str = 'gsheets', parse_url
         'json': json.dumps(s),
         'title': title_description.get('title', ''),
         'description': title_description.get('description', ''),
+        'insert_date': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.000Z')
     }
     if not tweet_dict['title']:
         if s.get('quoted_status', {}):
@@ -217,13 +217,14 @@ def create_df_statuses(statuses: List[dict], save_json_col: bool = True, output:
         'num_followers',
         'quoted_status_id',
         'id',
+        'insert_date'
     ]
     if save_json_col:
         columns.append('json')
     df = df.reindex(labels=columns, axis=1)
     if output:
         df.to_csv(output, index=False)
-        print(f'Likes saved in {output}')
+        print(f'{len(df)} likes saved in {output}')
     return df
 
 
@@ -271,15 +272,9 @@ def get_likes(max_calls: int = 5, parse_urls: bool = True) -> List[dict]:
     return result
 
 
-def delete_likes_already_saved(likes: List) -> List:
-    ids_saved_likes = get_all_likes_ids()
-    ids_saved_likes_str = [str(l) for l in ids_saved_likes]
-    result = [l for l in likes if not l['id'] in ids_saved_likes_str]
-    return result
-
-
 def save_latest_likes_csv(parse_urls: bool = True, save_json_col: bool = True, output: str = 'data/latest_likes.csv', max_calls: int = 1):
+    print(f'Downloading your latest ~{max_calls * 200} likes')
     likes = get_likes(max_calls=max_calls, parse_urls=parse_urls)
-    likes = delete_likes_already_saved(likes)
+    # likes = delete_likes_already_saved(likes)
     df = create_df_statuses(likes, save_json_col, output=output)
     return df
